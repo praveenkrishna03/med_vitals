@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:speech_to_text/speech_to_text.dart' as stt;
 import 'dart:io';
+import 'package:tflite/tflite.dart';
+
+import 'package:path_provider/path_provider.dart';
 
 void main() {
   SystemChrome.setSystemUIOverlayStyle(SystemUiOverlayStyle(
@@ -10,7 +14,12 @@ void main() {
   runApp(MyApp());
 }
 
-class MyApp extends StatelessWidget {
+class MyApp extends StatefulWidget {
+  @override
+  _MyAppState createState() => _MyAppState();
+}
+
+  class _MyAppState extends State<MyApp> {
   @override
   Widget build(BuildContext context) {
     SystemChrome.setSystemUIOverlayStyle(SystemUiOverlayStyle(
@@ -52,7 +61,75 @@ class MyApp extends StatelessWidget {
   }
 }
 
-class MyHomePage extends StatelessWidget {
+
+
+class MyHomePage extends StatefulWidget {
+  @override
+  _MyHomePageState createState() => _MyHomePageState();
+}
+
+class _MyHomePageState extends State<MyHomePage> {
+
+
+
+  static const platform = MethodChannel('emotion_analysis');
+  stt.SpeechToText _speech = stt.SpeechToText();
+  String _transcription = '';
+  bool _isLoading = false;
+
+  
+  void initState() {
+    super.initState();
+    _loadModel();
+  }
+
+  void _loadModel() async {
+    await Tflite.loadModel(
+      model: "assets/model.tflite",
+      labels: "assets/labels.txt",
+    );
+  }
+   @override
+  void dispose() {
+    Tflite.close();
+    super.dispose();
+  }
+
+  Future<void> _processAudioFile() async {
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      final result = await platform.invokeMethod('runModelOnAudio', {'transcription': _transcription});
+      print('Emotion analysis results: $result');
+    } on PlatformException catch (e) {
+      print('Error on platform: ${e.message}');
+    }
+  }
+
+  List<int> _convertTextToTokens(String text) {
+    // A simple tokenizer function to convert text to tokens
+    // Modify this function based on your tokenizer implementation
+    List<int> tokens = [];
+    for (int i = 0; i < text.length; i++) {
+      tokens.add(text.codeUnitAt(i));
+    }
+    return tokens;
+  }
+
+  Future<String> _saveFileLocally(String fileName, String filePath) async {
+  Directory appDocDir = await getApplicationDocumentsDirectory();
+  String appDocPath = appDocDir.path;
+  String localPath = '$appDocPath/$fileName';
+  
+  File originalFile = File(filePath);
+  File localFile = await originalFile.copy(localPath);
+  
+  return localFile.path;
+}
+
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -129,12 +206,38 @@ class MyHomePage extends StatelessWidget {
                       ),
                       SizedBox(height: 16.0),
                       ElevatedButton(
-                        onPressed: () {
+                        onPressed: () async {
                           try {
-                            openFileExplorer();
-                          } catch (e) {
-                            print('Error opening file explorer: $e');
-                          }
+      // Open file picker
+      FilePickerResult? result = await FilePicker.platform.pickFiles(
+        type: FileType.audio,
+        allowCompression: true,
+      );
+
+      if (result != null) {
+        // Get the file
+        PlatformFile file = result.files.first;
+
+        // Check if file.bytes is not null
+        if (file.bytes != null) {
+          // Access file.bytes to get the file content as Uint8List
+          Uint8List bytes = file.bytes!;
+          
+          // Here you can process the file content as needed
+          // For example, you can save it to a local file
+
+          print('File picked: ${file.name}, size: ${bytes.lengthInBytes}');
+        } else {
+          print('File bytes are null');
+        }
+      } else {
+        // User canceled the picker
+        print('User canceled file picking');
+      }
+    } catch (e) {
+      print('Error picking file: $e');
+    }
+    await _processAudioFile();
                         },
                         style: ElevatedButton.styleFrom(
                           fixedSize: Size(300, 2),
