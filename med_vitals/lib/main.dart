@@ -3,7 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
 import 'dart:io';
-import 'package:tflite/tflite.dart';
+//import 'package:tflite/tflite.dart';
 
 import 'package:path_provider/path_provider.dart';
 
@@ -19,7 +19,7 @@ class MyApp extends StatefulWidget {
   _MyAppState createState() => _MyAppState();
 }
 
-  class _MyAppState extends State<MyApp> {
+class _MyAppState extends State<MyApp> {
   @override
   Widget build(BuildContext context) {
     SystemChrome.setSystemUIOverlayStyle(SystemUiOverlayStyle(
@@ -61,28 +61,23 @@ class MyApp extends StatefulWidget {
   }
 }
 
-
-
 class MyHomePage extends StatefulWidget {
   @override
   _MyHomePageState createState() => _MyHomePageState();
 }
 
 class _MyHomePageState extends State<MyHomePage> {
-
-
-
   static const platform = MethodChannel('emotion_analysis');
   stt.SpeechToText _speech = stt.SpeechToText();
   String _transcription = '';
   bool _isLoading = false;
 
-  
+  /*
   void initState() {
     super.initState();
     _loadModel();
   }
-
+  
   void _loadModel() async {
     await Tflite.loadModel(
       model: "assets/model.tflite",
@@ -94,6 +89,7 @@ class _MyHomePageState extends State<MyHomePage> {
     Tflite.close();
     super.dispose();
   }
+  */
 
   Future<void> _processAudioFile() async {
     setState(() {
@@ -101,7 +97,8 @@ class _MyHomePageState extends State<MyHomePage> {
     });
 
     try {
-      final result = await platform.invokeMethod('runModelOnAudio', {'transcription': _transcription});
+      final result = await platform
+          .invokeMethod('runModelOnAudio', {'transcription': _transcription});
       print('Emotion analysis results: $result');
     } on PlatformException catch (e) {
       print('Error on platform: ${e.message}');
@@ -119,16 +116,15 @@ class _MyHomePageState extends State<MyHomePage> {
   }
 
   Future<String> _saveFileLocally(String fileName, String filePath) async {
-  Directory appDocDir = await getApplicationDocumentsDirectory();
-  String appDocPath = appDocDir.path;
-  String localPath = '$appDocPath/$fileName';
-  
-  File originalFile = File(filePath);
-  File localFile = await originalFile.copy(localPath);
-  
-  return localFile.path;
-}
+    Directory appDocDir = await getApplicationDocumentsDirectory();
+    String appDocPath = appDocDir.path;
+    String localPath = '$appDocPath/$fileName';
 
+    File originalFile = File(filePath);
+    File localFile = await originalFile.copy(localPath);
+
+    return localFile.path;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -208,36 +204,38 @@ class _MyHomePageState extends State<MyHomePage> {
                       ElevatedButton(
                         onPressed: () async {
                           try {
-      // Open file picker
-      FilePickerResult? result = await FilePicker.platform.pickFiles(
-        type: FileType.audio,
-        allowCompression: true,
-      );
+                            // Open file picker
+                            FilePickerResult? result =
+                                await FilePicker.platform.pickFiles(
+                              type: FileType.audio,
+                              allowCompression: true,
+                            );
 
-      if (result != null) {
-        // Get the file
-        PlatformFile file = result.files.first;
+                            if (result != null) {
+                              // Get the file
+                              PlatformFile file = result.files.first;
 
-        // Check if file.bytes is not null
-        if (file.bytes != null) {
-          // Access file.bytes to get the file content as Uint8List
-          Uint8List bytes = file.bytes!;
-          
-          // Here you can process the file content as needed
-          // For example, you can save it to a local file
+                              // Check if file.bytes is not null
+                              if (file.bytes != null) {
+                                // Access file.bytes to get the file content as Uint8List
+                                Uint8List bytes = file.bytes!;
 
-          print('File picked: ${file.name}, size: ${bytes.lengthInBytes}');
-        } else {
-          print('File bytes are null');
-        }
-      } else {
-        // User canceled the picker
-        print('User canceled file picking');
-      }
-    } catch (e) {
-      print('Error picking file: $e');
-    }
-    await _processAudioFile();
+                                // Here you can process the file content as needed
+                                // For example, you can save it to a local file
+
+                                print(
+                                    'File picked: ${file.name}, size: ${bytes.lengthInBytes}');
+                              } else {
+                                print('File bytes are null');
+                              }
+                            } else {
+                              // User canceled the picker
+                              print('User canceled file picking');
+                            }
+                          } catch (e) {
+                            print('Error picking file: $e');
+                          }
+                          await _processAudioFile();
                         },
                         style: ElevatedButton.styleFrom(
                           fixedSize: Size(300, 2),
